@@ -63,6 +63,8 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000
 ```
 
+`requirements.txt` pins **CPU-only** PyTorch (`torch+cpu` via PyTorch’s wheel index). On Linux, a plain `torch` install often pulls **CUDA/NVIDIA** packages (multi‑GB) and is wrong for hosts like **Render** (CPU-only), where that can **OOM** and surface as **503** in the browser.
+
 Backend health check: [http://127.0.0.1:8000/health](http://127.0.0.1:8000/health)
 
 Copy `backend/.env.example` to `.env` if you need to customize `CORS_ORIGINS`.

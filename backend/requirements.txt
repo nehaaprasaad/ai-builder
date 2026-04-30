@@ -1,3 +1,8 @@
+# CPU-only PyTorch — avoids ~2GB+ of CUDA/NVIDIA wheels on Linux (e.g. Render).
+# Default `pip install torch` on x86_64 Linux pulls GPU stacks and often OOMs small instances.
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.6.0+cpu
+
 fastapi==0.115.6
 uvicorn[standard]==0.32.1
 sentence-transformers==3.3.1

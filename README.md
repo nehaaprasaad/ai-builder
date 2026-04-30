@@ -143,6 +143,21 @@ Use any container-friendly or Python host, for example **Railway**, **Render**, 
 
 On that host, set **`CORS_ORIGINS`** to include your Vercel site (comma-separated), e.g. `https://your-app.vercel.app,http://localhost:3000`.
 
+#### Render (Python Web Service)
+
+Render’s default Python can be very new; **`rapidfuzz`** may have no pre-built wheel for it, so `pip` tries to compile from source and fails with **`metadata-generation-failed`**. This repo pins **Python 3.12** via [`backend/.python-version`](backend/.python-version).
+
+| Setting | Value |
+|--------|--------|
+| **Root Directory** | `backend` |
+| **Runtime** | Python |
+| **Build Command** | `pip install --upgrade pip setuptools wheel && pip install --prefer-binary -r requirements.txt` |
+| **Start Command** | `uvicorn app.main:app --host 0.0.0.0 --port $PORT` |
+
+Do **not** use `npm run start` for this service. Set **`CORS_ORIGINS`** in the Render dashboard. Optional: use root [`render.yaml`](render.yaml) as a Blueprint starting point.
+
+**RAM:** The free tier (512 MB) may OOM when loading the embedding model; upgrade the instance if the process is killed after boot.
+
 ### 2) Connect Vercel to the API
 
 1. Import this repo on Vercel with **root directory** `./` (standard **Next.js** project—no Services).
@@ -167,6 +182,7 @@ vercel --prod
 ```text
 .env.example                   # NEXT_PUBLIC_API_URL → FastAPI origin
 .vercelignore                  # Excludes backend/ from Vercel uploads (frontend-only)
+render.yaml                    # Optional Render Blueprint for the FastAPI service
 
 app/
   globals.css                  # Theme, tokens, mesh background, utility font classes
@@ -186,6 +202,7 @@ lib/
   utils.ts                     # Utility helpers
 
 backend/
+  .python-version              # Pin Python 3.12 for hosts like Render (wheel compatibility)
   app/main.py                  # FastAPI analysis service
   requirements.txt             # Backend Python dependencies
 

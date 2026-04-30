@@ -1,0 +1,14 @@
+# Optional: Render Blueprint — create a Python Web Service from this file.
+# https://render.com/docs/infrastructure-as-code
+services:
+  - type: web
+    name: ayurguard-api
+    runtime: python
+    rootDir: backend
+    plan: free
+    buildCommand: pip install --upgrade pip setuptools wheel && pip install --prefer-binary -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: CORS_ORIGINS
+        sync: false

@@ -6,7 +6,9 @@
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "backend:dev": "cd backend && uvicorn app.main:app --reload --port 8000",
+    "backend:test": "cd backend && pytest -q"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",

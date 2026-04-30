@@ -21,4 +21,5 @@ export interface AnalysisResult {
   summaryExplanation: string;
   segments: SuspiciousSegment[];
   sources: SimilarSource[];
+  processingMs?: number;
 }

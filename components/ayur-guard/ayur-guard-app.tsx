@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScoreDisplay } from "@/components/ayur-guard/score-display";
-import { generateMockAnalysis } from "@/lib/mock-analysis";
+import { analyzeText } from "@/lib/api";
 import type { AnalysisResult } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -48,12 +48,24 @@ export function AyurGuardApp() {
     setError(null);
     setLoading(true);
     setResult(null);
-    await delay(1500 + Math.random() * 500);
-    setResult(generateMockAnalysis(t));
-    setLoading(false);
-    requestAnimationFrame(() => {
-      resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    });
+    try {
+      const [apiResult] = await Promise.all([
+        analyzeText(t),
+        delay(1500 + Math.random() * 500),
+      ]);
+      setResult(apiResult);
+      requestAnimationFrame(() => {
+        resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    } catch (err) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Unable to analyze right now. Please check backend service and try again.";
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
   }, [text]);
 
   return (
@@ -92,8 +104,8 @@ export function AyurGuardApp() {
           <p className="font-subtitle mx-auto mt-5 max-w-md text-sm font-normal leading-[1.68] tracking-[0.01em] text-[#5a5a5a] antialiased sm:max-w-lg sm:text-[0.9375rem] sm:leading-[1.7] md:mt-6 md:max-w-xl">
             Built for PG, PhD, and journal workflows where generic detectors
             drown in shared dravya names and miss paraphrased ślokas. This
-            prototype simulates domain-tuned scoring — wire your FastAPI +
-            embeddings stack when ready.
+            release runs domain-tuned scoring via FastAPI with embeddings,
+            cosine similarity, fuzzy matching, and Ayurvedic keyword boosting.
           </p>
           <ul className="mt-8 flex flex-wrap justify-center gap-x-8 gap-y-3 md:mt-10">
             {trustPoints.map((item) => (
@@ -120,12 +132,14 @@ export function AyurGuardApp() {
                     Analyze manuscript
                   </h2>
                   <p className="mt-1 max-w-lg text-sm leading-relaxed text-muted-foreground">
-                    Paste text below. Screening is assistive — not a misconduct
+                    Paste text below. Screening is assistive not a misconduct
                     finding.
                   </p>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Mock latency ~1.5–2s
+                  {result?.processingMs
+                    ? `Processed in ~${(result.processingMs / 1000).toFixed(1)}s`
+                    : "Typical response in ~1.5–6s"}
                 </p>
               </div>
 
@@ -149,7 +163,7 @@ export function AyurGuardApp() {
                   <p className="text-xs text-muted-foreground">
                     {text.trim().length > 0
                       ? `${text.trim().length.toLocaleString()} characters`
-                      : "Longer excerpts yield richer segment highlights in the demo."}
+                      : "Longer excerpts yield stronger segment-level analysis."}
                   </p>
                 </div>
 
@@ -248,8 +262,7 @@ export function AyurGuardApp() {
                 </h2>
               </div>
               <p className="max-w-sm text-sm text-muted-foreground">
-                Simulated output — structure matches the intended production
-                experience.
+                Generated from live backend analysis using domain-aware scoring.
               </p>
             </div>
 
@@ -318,8 +331,7 @@ export function AyurGuardApp() {
                   Closest references
                 </CardTitle>
                 <CardDescription className="text-sm">
-                  Illustrative journal & workshop sources — mock similarity
-                  ranks.
+                  Best-matching indexed references with similarity percentages.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3 px-4 py-6 sm:px-8 sm:py-8">
@@ -359,7 +371,8 @@ export function AyurGuardApp() {
             </Card>
 
             <p className="text-center text-xs text-muted-foreground">
-              AyurGuard prototype — simulated analysis for UI review.
+              AyurGuard analysis is assistive and should be reviewed by faculty,
+              reviewers, or editors before final decisions.
             </p>
           </section>
         ) : null}

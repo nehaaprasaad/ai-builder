@@ -3,6 +3,7 @@
 import { useCallback, useRef, useState } from "react";
 import { ArrowRight, Loader2, Link2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
@@ -16,7 +17,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScoreDisplay } from "@/components/ayur-guard/score-display";
 import { analyzeText } from "@/lib/api";
-import type { AnalysisResult } from "@/lib/types";
+import type { AnalysisResult, ScoreBand } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const PLACEHOLDER = `Paste abstract, methods, or discussion — including IAST or popular transliteration (Triphala, Aśvagandhā), classical citations, or śloka glosses as in your draft.`;
@@ -30,6 +31,28 @@ const trustPoints = [
   "Formulation & śloka context",
   "Semantic + fuzzy match",
 ];
+
+function bandBadgeClass(band: ScoreBand) {
+  switch (band) {
+    case "low":
+      return "border-emerald-800/20 bg-emerald-600/[0.09] text-emerald-950";
+    case "medium":
+      return "border-amber-800/20 bg-amber-500/[0.11] text-amber-950";
+    case "high":
+      return "border-rose-800/20 bg-rose-600/[0.1] text-rose-950";
+  }
+}
+
+function bandPublicLabel(band: ScoreBand) {
+  switch (band) {
+    case "low":
+      return "Band: lower concern (<30)";
+    case "medium":
+      return "Band: review zone (30–60)";
+    case "high":
+      return "Band: elevated (>60)";
+  }
+}
 
 export function AyurGuardApp() {
   const [text, setText] = useState("");
@@ -124,8 +147,8 @@ export function AyurGuardApp() {
         </div>
 
         <div className="mt-14 lg:mt-16">
-          <div className="relative rounded-2xl border border-black/[0.07] bg-white p-1 shadow-[0_1px_0_rgba(0,0,0,0.04),0_32px_64px_-32px_rgba(15,45,40,0.18)]">
-            <div className="rounded-[14px] bg-white px-4 py-8 sm:px-8 sm:py-10">
+          <div className="ayur-card relative overflow-hidden">
+            <div className="px-4 py-8 sm:px-8 sm:py-10">
               <div className="flex flex-col gap-2 border-b border-black/[0.06] pb-6 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                   <h2 className="text-xl font-semibold tracking-[-0.02em] text-foreground sm:text-2xl">
@@ -252,25 +275,77 @@ export function AyurGuardApp() {
             className="mt-16 scroll-mt-24 space-y-10 lg:mt-20"
             aria-live="polite"
           >
-            <div className="flex flex-col gap-2 border-b border-black/[0.06] pb-6 sm:flex-row sm:items-end sm:justify-between">
-              <div>
+            <div className="flex flex-col gap-3 border-b border-black/[0.06] pb-6 sm:flex-row sm:items-end sm:justify-between">
+              <div className="space-y-3">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-primary">
                   Results
                 </p>
-                <h2 className="font-display mt-2 text-2xl font-normal tracking-tight text-foreground sm:text-3xl">
-                  Similarity report
-                </h2>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+                  <h2 className="font-display text-2xl font-normal tracking-tight text-foreground sm:text-3xl">
+                    Similarity report
+                  </h2>
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      "w-fit shrink-0 font-mono text-[10px] font-semibold uppercase tracking-[0.14em]",
+                      bandBadgeClass(result.scoreBand)
+                    )}
+                  >
+                    {bandPublicLabel(result.scoreBand)}
+                  </Badge>
+                </div>
               </div>
-              <p className="max-w-sm text-sm text-muted-foreground">
-                Generated from live backend analysis using domain-aware scoring.
+              <p className="max-w-sm text-sm leading-relaxed text-muted-foreground">
+                Live FastAPI run: embeddings, cosine similarity, fuzzy
+                transliteration, and Ayurvedic keyword weighting.
               </p>
             </div>
 
             <ScoreDisplay score={result.score} band={result.scoreBand} />
 
-            <div className="rounded-2xl border border-black/[0.06] bg-white/90 px-6 py-6 shadow-sm sm:px-8 sm:py-7">
+            <div className="ayur-card-soft overflow-hidden">
+              <div className="grid gap-6 border-b border-black/[0.06] bg-black/[0.02] px-6 py-6 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.85fr)] sm:px-8 sm:py-7">
+                <div className="space-y-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                    Run metadata
+                  </p>
+                  <dl className="space-y-0 text-sm">
+                    <div className="flex items-baseline justify-between gap-4 border-b border-black/[0.05] py-2.5 first:pt-0">
+                      <dt className="text-muted-foreground">Embedding model</dt>
+                      <dd className="text-right font-medium text-foreground">
+                        all-MiniLM-L6-v2
+                      </dd>
+                    </div>
+                    <div className="flex items-baseline justify-between gap-4 border-b border-black/[0.05] py-2.5">
+                      <dt className="text-muted-foreground">References indexed</dt>
+                      <dd className="text-right font-medium tabular-nums text-foreground">
+                        {result.sources.length}
+                      </dd>
+                    </div>
+                    {result.processingMs ? (
+                      <div className="flex items-baseline justify-between gap-4 py-2.5 last:pb-0">
+                        <dt className="text-muted-foreground">Wall time</dt>
+                        <dd className="text-right font-medium tabular-nums text-foreground">
+                          {(result.processingMs / 1000).toFixed(1)}s
+                        </dd>
+                      </div>
+                    ) : null}
+                  </dl>
+                </div>
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                    What this run found
+                  </p>
+                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground md:text-[15px] md:leading-relaxed">
+                    {result.summaryExplanation}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="ayur-card-soft border-l-[3px] border-l-primary/35 px-6 py-6 sm:px-8 sm:py-7">
               <h3 className="font-display text-base font-normal tracking-tight text-foreground">
-                Interpreting the index
+                How to read the index
               </h3>
               <p className="mt-3 max-w-3xl text-sm leading-relaxed text-muted-foreground md:text-[15px] md:leading-relaxed">
                 The score blends{" "}
@@ -287,14 +362,15 @@ export function AyurGuardApp() {
               </p>
             </div>
 
-            <Card className="overflow-hidden rounded-2xl border-black/[0.06] bg-white shadow-[0_1px_0_rgba(0,0,0,0.04)] ring-0">
-              <CardHeader className="space-y-1 border-b border-black/[0.06] bg-black/[0.02] px-6 py-5 sm:px-8">
+            <Card className="ayur-card overflow-hidden border-0 shadow-none ring-0">
+              <CardHeader className="space-y-1.5 border-b border-black/[0.06] bg-black/[0.02] px-6 py-5 sm:px-8">
                 <CardTitle className="font-display text-lg font-normal tracking-tight">
                   Flagged segments
                 </CardTitle>
                 <CardDescription className="text-sm leading-relaxed">
-                  Review for citation, paraphrase quality, or template overlap
-                  with indexed literature.
+                  Each block is a passage that drove overlap. Use it to decide
+                  whether you need clearer citation, tighter paraphrase, or to
+                  trim template phrasing.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-5 px-4 py-6 sm:px-8 sm:py-8">
@@ -302,7 +378,7 @@ export function AyurGuardApp() {
                   <article
                     key={seg.id}
                     className={cn(
-                      "rounded-xl border border-black/[0.06] bg-[oklch(0.995_0.004_95)] px-5 py-5 sm:px-6",
+                      "ayur-inset px-5 py-5 sm:px-6",
                       "border-l-[3px]",
                       result.scoreBand === "high"
                         ? "border-l-[oklch(0.58_0.2_25)]"
@@ -311,13 +387,18 @@ export function AyurGuardApp() {
                           : "border-l-[oklch(0.52_0.14_155)]"
                     )}
                   >
-                    <p className="font-mono text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
-                      Segment {String(i + 1).padStart(2, "0")}
-                    </p>
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                        Segment {String(i + 1).padStart(2, "0")}
+                      </p>
+                    </div>
                     <p className="mt-3 text-[15px] font-medium leading-relaxed text-foreground">
                       {seg.text}
                     </p>
-                    <p className="mt-4 border-t border-black/[0.06] pt-4 text-sm leading-relaxed text-muted-foreground">
+                    <p className="mt-1 text-[11px] font-medium uppercase tracking-[0.1em] text-muted-foreground">
+                      Why it surfaced
+                    </p>
+                    <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                       {seg.explanation}
                     </p>
                   </article>
@@ -325,46 +406,52 @@ export function AyurGuardApp() {
               </CardContent>
             </Card>
 
-            <Card className="rounded-2xl border-black/[0.06] bg-white shadow-[0_1px_0_rgba(0,0,0,0.04)] ring-0">
-              <CardHeader className="border-b border-black/[0.06] px-6 py-5 sm:px-8">
+            <Card className="ayur-card overflow-hidden border-0 shadow-none ring-0">
+              <CardHeader className="border-b border-black/[0.06] bg-black/[0.02] px-6 py-5 sm:px-8">
                 <CardTitle className="font-display text-lg font-normal tracking-tight">
                   Closest references
                 </CardTitle>
-                <CardDescription className="text-sm">
-                  Best-matching indexed references with similarity percentages.
+                <CardDescription className="text-sm leading-relaxed">
+                  Ranked by similarity to your excerpt. Percentages are
+                  assistive, not a plagiarism verdict.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3 px-4 py-6 sm:px-8 sm:py-8">
-                {result.sources.map((src) => (
+                {result.sources.map((src, rank) => (
                   <div
                     key={src.id}
-                    className="group rounded-xl border border-black/[0.06] bg-white px-5 py-4 transition-colors hover:bg-black/[0.02] sm:px-6"
+                    className="ayur-card-soft group flex gap-4 px-4 py-4 transition-colors hover:bg-black/[0.02] sm:px-5 sm:py-4"
                   >
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                      <div className="min-w-0 flex-1">
-                        <h3 className="text-[15px] font-semibold leading-snug tracking-tight text-foreground">
-                          {src.title}
-                        </h3>
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          {src.venue} · {src.year}
-                        </p>
+                    <span className="font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground tabular-nums">
+                      #{rank + 1}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="min-w-0 flex-1">
+                          <h3 className="text-[15px] font-semibold leading-snug tracking-tight text-foreground">
+                            {src.title}
+                          </h3>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {src.venue} · {src.year}
+                          </p>
+                        </div>
+                        <span
+                          className={cn(
+                            "shrink-0 rounded-lg px-2.5 py-1 text-center font-mono text-xs font-semibold tabular-nums",
+                            src.similarity >= 60
+                              ? "bg-[oklch(0.96_0.04_25)] text-[oklch(0.4_0.15_25)]"
+                              : src.similarity >= 40
+                                ? "bg-[oklch(0.97_0.04_85)] text-[oklch(0.42_0.1_65)]"
+                                : "bg-[oklch(0.96_0.04_155)] text-[oklch(0.38_0.1_155)]"
+                          )}
+                        >
+                          {src.similarity}%
+                        </span>
                       </div>
-                      <span
-                        className={cn(
-                          "shrink-0 rounded-lg px-2.5 py-1 text-center font-mono text-xs font-semibold tabular-nums",
-                          src.similarity >= 60
-                            ? "bg-[oklch(0.96_0.04_25)] text-[oklch(0.4_0.15_25)]"
-                            : src.similarity >= 40
-                              ? "bg-[oklch(0.97_0.04_85)] text-[oklch(0.42_0.1_65)]"
-                              : "bg-[oklch(0.96_0.04_155)] text-[oklch(0.38_0.1_155)]"
-                        )}
-                      >
-                        {src.similarity}%
-                      </span>
+                      <p className="mt-4 border-l-2 border-primary/25 pl-4 text-sm leading-relaxed text-muted-foreground">
+                        {src.snippet}
+                      </p>
                     </div>
-                    <p className="mt-4 border-l-2 border-primary/25 pl-4 text-sm leading-relaxed text-muted-foreground">
-                      {src.snippet}
-                    </p>
                   </div>
                 ))}
               </CardContent>

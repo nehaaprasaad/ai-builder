@@ -230,6 +230,17 @@ if os.getenv("CORS_DISABLE_VERCEL_REGEX", "").lower() not in ("1", "true", "yes"
 app.add_middleware(CORSMiddleware, **_cors_kw)
 
 
+@app.get("/")
+def root() -> dict[str, str]:
+    """Public base URL — browsers and HEAD / probes otherwise see 404."""
+    return {
+        "service": "AyurGuard API",
+        "health": "/health",
+        "analyze": "POST /analyze",
+        "docs": "/docs",
+    }
+
+
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}

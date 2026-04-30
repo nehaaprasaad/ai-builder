@@ -46,6 +46,14 @@ def setup_module():
 client = TestClient(main.app)
 
 
+def test_root():
+    response = client.get("/")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["service"] == "AyurGuard API"
+    assert data["health"] == "/health"
+
+
 def test_health():
     response = client.get("/health")
     assert response.status_code == 200

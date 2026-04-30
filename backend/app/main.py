@@ -3,8 +3,13 @@ from __future__ import annotations
 import re
 import time
 import os
+from contextlib import asynccontextmanager
 from functools import lru_cache
 from typing import Literal
+
+# Limit BLAS/thread pools before numpy/torch pull them in (helps small hosts like Render free).
+os.environ.setdefault("OMP_NUM_THREADS", "1")
+os.environ.setdefault("MKL_NUM_THREADS", "1")
 
 import numpy as np
 from fastapi import FastAPI, HTTPException
@@ -179,14 +184,33 @@ def get_model() -> SentenceTransformer:
     return SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
 
 
+def _encode_batch_size() -> int:
+    return max(1, int(os.getenv("AYUR_ENCODE_BATCH_SIZE", "8")))
+
+
 @lru_cache(maxsize=1)
 def get_corpus_embeddings() -> np.ndarray:
     model = get_model()
     texts = [doc.text for doc in CORPUS]
-    return model.encode(texts, convert_to_numpy=True, normalize_embeddings=True)
+    return model.encode(
+        texts,
+        convert_to_numpy=True,
+        normalize_embeddings=True,
+        batch_size=_encode_batch_size(),
+    )
 
 
-app = FastAPI(title="AyurGuard API", version="1.0.0")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # After upgrading RAM on Render/Railway, set AYUR_PRELOAD_MODEL=1 so the first user
+    # request is not killed by cold-start model load + gateway timeout.
+    if os.getenv("AYUR_PRELOAD_MODEL", "").lower() in ("1", "true", "yes"):
+        get_model()
+        get_corpus_embeddings()
+    yield
+
+
+app = FastAPI(title="AyurGuard API", version="1.0.0", lifespan=lifespan)
 cors_origins = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000")
 origin_list = [o.strip() for o in cors_origins.split(",") if o.strip()]
 # Browsers require Access-Control-Allow-Origin for cross-site fetch (e.g. Vercel → Render).
@@ -223,7 +247,10 @@ def analyze(payload: AnalyzeRequest) -> AnalyzeResponse:
     corpus_embeddings = get_corpus_embeddings()
 
     seg_embeddings = model.encode(
-        segments, convert_to_numpy=True, normalize_embeddings=True
+        segments,
+        convert_to_numpy=True,
+        normalize_embeddings=True,
+        batch_size=_encode_batch_size(),
     )
     cosine_matrix = cosine_similarity(seg_embeddings, corpus_embeddings)
 

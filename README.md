@@ -158,6 +158,12 @@ Do **not** use `npm run start` for this service. Set **`CORS_ORIGINS`** in the R
 
 **RAM:** The free tier (512 MB) may OOM when loading the embedding model; upgrade the instance if the process is killed after boot.
 
+#### “CORS” errors in the browser but the real problem is **502**
+
+If DevTools shows **`Access-Control-Allow-Origin` missing** together with **HTTP 502**, the API process on Render often **crashed or timed out** (common on **512 MB free** when loading **PyTorch + sentence-transformers**). The **proxy error page has no CORS headers**, so the browser blames CORS instead of the crash.
+
+**What to do:** In Render → your web service → **upgrade instance type** (e.g. **Starter** or higher) so RAM is enough for the model. Open **Logs** and redeploy; look for `Out of memory` or worker exit. After upgrading, you can set **`AYUR_PRELOAD_MODEL=true`** on the service so the model loads at boot (avoids first-request timeouts).
+
 ### 2) Connect Vercel to the API
 
 1. Import this repo with **root directory** `./`.

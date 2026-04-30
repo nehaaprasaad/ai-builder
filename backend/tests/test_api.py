@@ -5,7 +5,13 @@ from app import main
 
 
 class DummyModel:
-    def encode(self, texts, convert_to_numpy=True, normalize_embeddings=True):
+    def encode(
+        self,
+        texts,
+        convert_to_numpy=True,
+        normalize_embeddings=True,
+        **kwargs,
+    ):
         vectors = []
         for text in texts:
             t = text.lower()

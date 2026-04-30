@@ -160,10 +160,11 @@ Do **not** use `npm run start` for this service. Set **`CORS_ORIGINS`** in the R
 
 ### 2) Connect Vercel to the API
 
-1. Import this repo on Vercel with **root directory** `./` (standard **Next.js** project—no Services).
-2. Under **Settings → Environment Variables**, set:
-   - **`NEXT_PUBLIC_API_URL`** = your API’s **origin only** (no path, no trailing slash), e.g. `https://ayurguard-api.up.railway.app`
-3. Redeploy.
+1. Import this repo with **root directory** `./`.
+2. **Framework:** Prefer **Next.js** in **Settings → General → Framework Preset**. If the project was created as **Services** and you see *“No services configured — Add experimentalServices to vercel.json”*, this repo includes [`vercel.json`](vercel.json) with **only the Next.js** service (the Python API stays on Render—do not add a second service on Vercel).
+3. Under **Settings → Environment Variables**, set:
+   - **`NEXT_PUBLIC_API_URL`** = your API’s **origin only** (no path, no trailing slash), e.g. `https://your-api.onrender.com`
+4. Redeploy.
 
 `.vercelignore` skips uploading the `backend/` folder to Vercel to keep deploys fast; the UI only needs the configured URL.
 
@@ -180,6 +181,7 @@ vercel --prod
 ## Project structure
 
 ```text
+vercel.json                    # Services-mode projects: Next.js-only experimentalServices
 .env.example                   # NEXT_PUBLIC_API_URL → FastAPI origin
 .vercelignore                  # Excludes backend/ from Vercel uploads (frontend-only)
 render.yaml                    # Optional Render Blueprint for the FastAPI service

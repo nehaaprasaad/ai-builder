@@ -1,5 +1,6 @@
-# Keep Python / Next.js deploy uploads small (Vercel Services bundles from repo root)
-backend/.venv
+# Frontend-only on Vercel: ML backend exceeds serverless size limits (~500 MB).
+backend
+
 **/.venv
 **/__pycache__
 **/*.pyc

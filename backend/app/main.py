@@ -189,13 +189,21 @@ def get_corpus_embeddings() -> np.ndarray:
 app = FastAPI(title="AyurGuard API", version="1.0.0")
 cors_origins = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000")
 origin_list = [o.strip() for o in cors_origins.split(",") if o.strip()]
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origin_list,
-    allow_credentials=False,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# Browsers require Access-Control-Allow-Origin for cross-site fetch (e.g. Vercel → Render).
+# By default, also allow any https://*.vercel.app host so preview URLs work without
+# listing each one. Set CORS_DISABLE_VERCEL_REGEX=1 to turn that off.
+_cors_kw: dict = {
+    "allow_origins": origin_list,
+    "allow_credentials": False,
+    "allow_methods": ["*"],
+    "allow_headers": ["*"],
+}
+if os.getenv("CORS_DISABLE_VERCEL_REGEX", "").lower() not in ("1", "true", "yes"):
+    _cors_kw["allow_origin_regex"] = os.getenv(
+        "CORS_VERCEL_REGEX",
+        r"https://.*\.vercel\.app",
+    )
+app.add_middleware(CORSMiddleware, **_cors_kw)
 
 
 @app.get("/health")

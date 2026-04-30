@@ -1,0 +1,9 @@
+# Keep Python / Next.js deploy uploads small (Vercel Services bundles from repo root)
+backend/.venv
+**/.venv
+**/__pycache__
+**/*.pyc
+.pytest_cache
+node_modules
+.next
+.git

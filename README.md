@@ -135,13 +135,25 @@ npm run backend:test
 
 ## Deploy on Vercel
 
-### Dashboard method
-1. Push this repo to GitHub/GitLab/Bitbucket.
-2. Go to [vercel.com](https://vercel.com) and import the repository.
-3. Keep default Next.js settings.
-4. Click **Deploy**.
+This repo includes root [`vercel.json`](vercel.json) using [Vercel Services](https://vercel.com/docs/services) (`experimentalServices`): **Next.js** at `/` and **FastAPI** at `/_backend`.
 
-### CLI method (optional)
+### Before you deploy
+
+1. **Project framework:** In the Vercel import flow, choose the **Services** / multi-service option when prompted (framework must match `vercel.json`).
+2. **Root directory:** `./` (repository root — where `package.json` and `vercel.json` live).
+3. **Environment variables** (Project → Settings → Environment Variables):
+   - **`NEXT_PUBLIC_API_URL`** — For Services, Vercel usually injects a client-safe value like `/_backend` for the service named `api`. If it is not set after the first deploy, add:
+     - Production / Preview: `/_backend`  
+     (no trailing slash; the app calls `/_backend/analyze`.)
+   - **`CORS_ORIGINS`** (for the Python service): comma-separated origins that may call the API from the browser, e.g. `https://<your-project>.vercel.app,http://localhost:3000`. Include preview URLs if you need previews to hit production API.
+
+Redeploy after changing env vars.
+
+### Caveat (ML backend)
+
+The API depends on **sentence-transformers** and related libraries. Bundles are large and cold starts can be slow; Vercel [function limits](https://vercel.com/docs/functions/runtimes) may cause the Python service to fail on size or timeout. If that happens, deploy **only the Next.js app** on Vercel, host FastAPI on Railway / Render / Fly.io / similar, and set `NEXT_PUBLIC_API_URL` to that **full HTTPS origin** (no path), then redeploy.
+
+### CLI (optional)
 
 ```bash
 npm i -g vercel
@@ -149,13 +161,16 @@ vercel
 vercel --prod
 ```
 
-Set `NEXT_PUBLIC_API_URL` in Vercel to your deployed backend URL and redeploy.
+Use `vercel dev -L` to run all services locally per [Vercel docs](https://vercel.com/docs/services#local-development).
 
 ---
 
 ## Project structure
 
 ```text
+vercel.json                    # Vercel Services: Next.js + FastAPI route prefixes
+.env.example                   # NEXT_PUBLIC_API_URL (local vs Vercel)
+
 app/
   globals.css                  # Theme, tokens, mesh background, utility font classes
   layout.tsx                   # Fonts + metadata
